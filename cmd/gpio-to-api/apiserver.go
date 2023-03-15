@@ -75,7 +75,7 @@ func (apiServer APIServer) getValue(w http.ResponseWriter) {
 
 	switch gpioType := sensor.Type; {
 	case gpioType == "sht3x":
-		response, err = sensor.GetValue(config.Unit)
+		response, err = sensor.GetValue(config.Unit, config.CacheTTL)
 	}
 
 	if err != nil {

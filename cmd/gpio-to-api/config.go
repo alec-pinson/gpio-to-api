@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -14,6 +15,7 @@ type Config struct {
 	Unit     string
 	OnPress  string
 	URL      string
+	CacheTTL time.Duration
 }
 
 func (config Config) Load() Config {
@@ -49,6 +51,12 @@ func (config Config) Load() Config {
 	config.Unit = os.Getenv("UNIT")
 	if config.Unit == "" {
 		config.Unit = "C"
+	}
+
+	// cache time, sensor values are cached, when endpoint is called the value is not taken again if within cache time
+	config.CacheTTL, _ = time.ParseDuration(os.Getenv("CACHE_TTL"))
+	if config.CacheTTL == 0 {
+		config.CacheTTL = 1 * time.Minute
 	}
 
 	if config.GPIOType == "button" {
