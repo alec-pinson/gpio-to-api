@@ -1,6 +1,8 @@
 package drivers
 
 import (
+	"time"
+
 	"gobot.io/x/gobot/drivers/i2c"
 	"gobot.io/x/gobot/platforms/raspi"
 )
@@ -12,14 +14,22 @@ type Sensor struct {
 	Humidity    float32
 }
 
-func (sensor Sensor) GetValue(unit string) (Sensor, error) {
+var cachedTemperature, cachedHumidity float32
+var cachedTime time.Time
+
+func (sensor Sensor) GetValue(unit string, cacheTTL time.Duration) (Sensor, error) {
 	var err error
-	// sensor.Type = config.GPIOType
+	sensor.Unit = unit
+	if !time.Now().After(cachedTime.Add(cacheTTL)) {
+		sensor.Temperature, sensor.Humidity = cachedTemperature, cachedHumidity
+		return sensor, err
+	}
 	sht3x := i2c.NewSHT3xDriver(raspi.NewAdaptor())
 	sht3x.Units = unit
-	sensor.Unit = unit
 	sht3x.Start()
 	sensor.Temperature, sensor.Humidity, err = sht3x.Sample()
+	cachedTemperature, cachedHumidity = sensor.Temperature, sensor.Humidity
+	cachedTime = time.Now()
 	sht3x.Halt()
 	return sensor, err
 }
