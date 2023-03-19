@@ -62,6 +62,8 @@ func (apiServer APIServer) turnOff(w http.ResponseWriter) {
 	}
 }
 
+var mu sync.RWMutex
+
 func (apiServer APIServer) getValue(w http.ResponseWriter) {
 	if !valueInList(config.GPIOType, getValueList) {
 		writeErrorResponse(w, "Cannot get value for this GPIO type, only options are turnOn or turnOff")
@@ -70,16 +72,20 @@ func (apiServer APIServer) getValue(w http.ResponseWriter) {
 
 	var response any
 	var err error
-	var sensor drivers.Sensor
+	var cacheUsed bool = false
 	sensor.Type = config.GPIOType
 
 	switch gpioType := sensor.Type; {
 	case gpioType == "sht3x":
-		response, err = sensor.GetValue(config.Unit, config.CacheTTL)
+		mu.Lock() // prevent spamming sensor
+		response, cacheUsed, err = sensor.GetValue(config.Unit, config.CacheTTL)
+		mu.Unlock()
 	}
 
 	if err != nil {
 		writeErrorResponse(w, "Error getting value: %v", err)
+	} else if config.Debug && cacheUsed {
+		log.Println("Values retrieved using cache")
 	}
 
 	writeResponse(w, response)
