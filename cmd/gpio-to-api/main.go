@@ -11,6 +11,7 @@ var (
 	apiServer     APIServer
 	turnOnOffList []string = []string{"gpio"}
 	getValueList  []string = []string{"sht3x"}
+	sensor        drivers.Sensor
 )
 
 func main() {
@@ -18,9 +19,14 @@ func main() {
 
 	config = config.Load()
 
-	if config.GPIOType == "button" {
+	switch gpioType := config.GPIOType; {
+	case gpioType == "button":
 		drivers.MonitorButton(config.GPIOPin, config.OnPress, config.URL)
-	} else {
-		apiServer.Start()
+	case gpioType == "gpio":
+
+	case gpioType == "sht3x":
+
 	}
+
+	apiServer.Start()
 }
