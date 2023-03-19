@@ -28,6 +28,7 @@ func (sensor Sensor) GetValue(unit string, cacheTTL time.Duration) (Sensor, erro
 	sht3x.Units = unit
 	sht3x.Start()
 	sensor.Temperature, sensor.Humidity, err = sht3x.Sample()
+	time.Sleep(1)
 	cachedTemperature, cachedHumidity = sensor.Temperature, sensor.Humidity
 	cachedTime = time.Now()
 	sht3x.Halt()
