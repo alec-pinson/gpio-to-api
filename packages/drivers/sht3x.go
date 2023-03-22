@@ -24,14 +24,22 @@ func (sensor Sensor) GetValue(unit string, cacheTTL time.Duration) (Sensor, bool
 		sensor.Temperature, sensor.Humidity = cachedTemperature, cachedHumidity
 		return sensor, true, err
 	}
-	sht3x := i2c.NewSHT3xDriver(raspi.NewAdaptor())
-	sht3x.Units = unit
-	sht3x.Start()
-	sensor.Temperature, sensor.Humidity, err = sht3x.Sample()
-	if err == nil {
-		cachedTemperature, cachedHumidity = sensor.Temperature, sensor.Humidity
-		cachedTime = time.Now()
+
+	// retry 3 times if an error occurs, sleep 1 second each time
+	for i := 0; i < 3; i++ {
+		sht3x := i2c.NewSHT3xDriver(raspi.NewAdaptor())
+		sht3x.Units = unit
+		sht3x.Start()
+		sensor.Temperature, sensor.Humidity, err = sht3x.Sample()
+		sht3x.Halt()
+
+		if err == nil {
+			cachedTemperature, cachedHumidity = sensor.Temperature, sensor.Humidity
+			cachedTime = time.Now()
+			continue
+		}
+		time.Sleep(1 * time.Second)
 	}
-	sht3x.Halt()
+
 	return sensor, false, err
 }
