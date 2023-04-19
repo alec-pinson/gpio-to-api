@@ -17,12 +17,12 @@ type Sensor struct {
 var cachedTemperature, cachedHumidity float32
 var cachedTime time.Time
 
-func (sensor Sensor) GetValue(unit string, cacheTTL time.Duration) (Sensor, bool, error) {
+func (sensor *Sensor) GetValue(unit string, cacheTTL time.Duration) (Sensor, bool, error) {
 	var err error
 	sensor.Unit = unit
 	if !time.Now().After(cachedTime.Add(cacheTTL)) {
 		sensor.Temperature, sensor.Humidity = cachedTemperature, cachedHumidity
-		return sensor, true, err
+		return *sensor, true, err
 	}
 
 	// retry 3 times if an error occurs, sleep 1 second each time
@@ -41,5 +41,5 @@ func (sensor Sensor) GetValue(unit string, cacheTTL time.Duration) (Sensor, bool
 		time.Sleep(1 * time.Second)
 	}
 
-	return sensor, false, err
+	return *sensor, false, err
 }
