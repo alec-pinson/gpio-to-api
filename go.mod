@@ -2,7 +2,10 @@ module github.com/alec-pinson/gpio-to-api
 
 go 1.20
 
-require gobot.io/x/gobot v1.16.0
+require (
+	github.com/yousuf64/shift v0.4.0
+	gobot.io/x/gobot v1.16.0
+)
 
 require (
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect

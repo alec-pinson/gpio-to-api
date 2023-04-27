@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/alec-pinson/gpio-to-api/packages/drivers"
+	"github.com/yousuf64/shift"
 )
 
 type APIServer struct{}
@@ -14,27 +15,32 @@ type APIServer struct{}
 func (apiServer APIServer) Start() {
 	var wg sync.WaitGroup
 	log.Println("Starting API server...")
-	http.HandleFunc("/", apiServer.Endpoint)
+
+	router := shift.New()
+	router.GET("/", shift.HTTPHandlerFunc(apiServer.getValue))
+	router.GET("/turnOn", shift.HTTPHandlerFunc(apiServer.turnOn))
+	router.GET("/turnOff", shift.HTTPHandlerFunc(apiServer.turnOff))
+	router.GET("/health/live", shift.HTTPHandlerFunc(apiServer.healthLive))
+	router.GET("/health/ready", shift.HTTPHandlerFunc(apiServer.healthReady))
+
 	wg.Add(1)
-	go http.ListenAndServe(":8080", nil)
+	go http.ListenAndServe(":8080", router.Serve())
 	log.Println("API Server started...")
 	wg.Wait()
 }
 
-func (apiServer APIServer) Endpoint(w http.ResponseWriter, r *http.Request) {
-	switch path := r.URL.Path[1:]; {
-	case path == "":
-		apiServer.getValue(w)
-	case path == "turnOn":
-		apiServer.turnOn(w)
-	case path == "turnOff":
-		apiServer.turnOff(w)
-	case path == "health/live" || path == "health/ready":
-		fmt.Fprintf(w, "ok")
-	}
+func (apiServer APIServer) healthLive(w http.ResponseWriter, r *http.Request) {
+	r.Close = true
+	fmt.Fprintf(w, "ok")
 }
 
-func (apiServer APIServer) turnOn(w http.ResponseWriter) {
+func (apiServer APIServer) healthReady(w http.ResponseWriter, r *http.Request) {
+	r.Close = true
+	fmt.Fprintf(w, "ok")
+}
+
+func (apiServer APIServer) turnOn(w http.ResponseWriter, r *http.Request) {
+	r.Close = true
 	if !valueInList(config.GPIOType, turnOnOffList) {
 		writeErrorResponse(w, "GPIO type cannot be turned on")
 		return
@@ -48,7 +54,8 @@ func (apiServer APIServer) turnOn(w http.ResponseWriter) {
 	}
 }
 
-func (apiServer APIServer) turnOff(w http.ResponseWriter) {
+func (apiServer APIServer) turnOff(w http.ResponseWriter, r *http.Request) {
+	r.Close = true
 	if !valueInList(config.GPIOType, turnOnOffList) {
 		writeErrorResponse(w, "GPIO Type cannot be turned off")
 		return
@@ -64,7 +71,8 @@ func (apiServer APIServer) turnOff(w http.ResponseWriter) {
 
 var mu sync.RWMutex
 
-func (apiServer APIServer) getValue(w http.ResponseWriter) {
+func (apiServer APIServer) getValue(w http.ResponseWriter, r *http.Request) {
+	r.Close = true
 	if !valueInList(config.GPIOType, getValueList) {
 		writeErrorResponse(w, "Cannot get value for this GPIO type, only options are turnOn or turnOff")
 		return
