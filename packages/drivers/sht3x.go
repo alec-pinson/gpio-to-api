@@ -1,6 +1,8 @@
 package drivers
 
 import (
+	"log"
+	"os"
 	"time"
 
 	"gobot.io/x/gobot/drivers/i2c"
@@ -14,32 +16,55 @@ type Sensor struct {
 	Humidity    float32
 }
 
+var firstRun bool = true
+var debugMode bool
+
+var sht3x = i2c.NewSHT3xDriver(raspi.NewAdaptor())
+
 var cachedTemperature, cachedHumidity float32
 var cachedTime time.Time
 
-func (sensor Sensor) GetValue(unit string, cacheTTL time.Duration) (Sensor, bool, error) {
+func Debug(s string, v ...any) {
+	if os.Getenv("DEBUG") == "true" {
+		log.Printf(s, v...)
+	}
+}
+
+func (sensor *Sensor) GetValue(unit string, cacheTTL time.Duration) (Sensor, bool, error) {
 	var err error
-	sensor.Unit = unit
+
+	if firstRun {
+		debugMode = os.Getenv("DEBUG") == "true"
+		Debug("first run")
+		firstRun = false
+		sensor.Unit = unit
+		sht3x.Units = unit
+		err = sht3x.Start()
+		if err != nil {
+			log.Fatal(err)
+		}
+		Debug("first run complete")
+	}
+
 	if !time.Now().After(cachedTime.Add(cacheTTL)) {
+		Debug("using cache (TTL %s)", cacheTTL)
 		sensor.Temperature, sensor.Humidity = cachedTemperature, cachedHumidity
-		return sensor, true, err
+		Debug("cache used")
+		return *sensor, true, err
 	}
 
 	// retry 3 times if an error occurs, sleep 1 second each time
 	for i := 0; i < 3; i++ {
-		sht3x := i2c.NewSHT3xDriver(raspi.NewAdaptor())
-		sht3x.Units = unit
-		sht3x.Start()
+		Debug("getting temps")
 		sensor.Temperature, sensor.Humidity, err = sht3x.Sample()
-		sht3x.Halt()
-
 		if err == nil {
 			cachedTemperature, cachedHumidity = sensor.Temperature, sensor.Humidity
 			cachedTime = time.Now()
-			continue
+			Debug("setting cache")
+			return *sensor, false, err
 		}
 		time.Sleep(1 * time.Second)
 	}
 
-	return sensor, false, err
+	return *sensor, false, err
 }

@@ -35,7 +35,7 @@ func (config Config) Load() Config {
 	if config.GPIOType == "" {
 		log.Fatalln("Environment variable 'GPIO_TYPE' must be set.")
 	}
-	if !(valueInList(config.GPIOType, turnOnOffList) || valueInList(config.GPIOType, getValueList) || config.GPIOType == "button") {
+	if !(valueInList(config.GPIOType, turnOnOffList) || valueInList(config.GPIOType, getValueList) || config.GPIOType == "button" || config.GPIOType == "test") {
 		log.Fatalf("Unknown GPIO_TYPE: %v", config.GPIOType)
 	}
 
